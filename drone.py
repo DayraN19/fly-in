@@ -12,4 +12,4 @@ class Drone:
         drones = [drone1, drone2]
         for drone in drones:
             return drones[drone].display()
-peut etre js
+peut etre jsp
