@@ -22,6 +22,5 @@ def main() -> None:
         print(f"Hub trouvé : {nom} aux coordonnées ({x}, {y})")
 
 
-
 if __name__ == "__main__":
     main()
