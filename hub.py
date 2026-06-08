@@ -7,10 +7,7 @@ class Hub:
         self.x = x
         self.y = y
         self.color = color
-
-        # Cette liste contiendra les objets Hub qui sont connectés à celui-ci
         self.connections: List["Hub"] = []
-
         self.is_occupied = False
 
     def display_info(self) -> None:
@@ -18,3 +15,7 @@ class Hub:
             f"Hub {self.name} ({self.x}, {self.y}) - "
             f"Couleur: {self.color if self.color else 'Aucune'}"
         )
+
+    def add_neighbor(self, neighbor_hub: "Hub") -> None:
+        if neighbor_hub not in self.connections:
+            self.connections.append(neighbor_hub)

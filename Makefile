@@ -2,7 +2,7 @@ install:
 	pip install -r requirements.txt
 
 run:
-	python3 flyin.py test.txt
+	python3 flyin.py maps/easy/01_linear_path.txt
 
 debug:
 	python3 -m pdb flyin.py

@@ -8,4 +8,4 @@ class Drone:
         self.connection = connection
 
     def display(self) -> Any:
-        print(f"D{self.id}={self.zone} or <{self.connection}>", end=" ")
+        print(f"D{self.id}={self.zone}", end=" ")
