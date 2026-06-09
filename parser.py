@@ -32,9 +32,11 @@ def verify_dict(dict_file: dict[str, list[str]]) -> bool:
 
 
 def parse_hub_line(line: str) -> tuple[str, int, int, str]:
-    elements = line.split()
-    name = elements[0]
-    x = int(elements[1])
-    y = int(elements[2])
-    option = elements[3] if len(elements) > 3 else ""
+    parts = line.split('[', 1)
+    main_part = parts[0].split()
+    name = main_part[0]
+    x = int(main_part[1])
+    y = int(main_part[2])
+    option = "[" + parts[1] if len(parts) > 1 else ""
+
     return name, x, y, option

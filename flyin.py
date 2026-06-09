@@ -2,7 +2,8 @@ import sys
 from drone import Drone
 from hub import Hub
 from parser import parse_config, parse_hub_line, verify_dict
-from pathfinding import find_shortest_path
+from pathfinding import find_short_path
+from visualizer import GraphVisualizer
 
 
 def main() -> None:
@@ -31,10 +32,11 @@ def main() -> None:
     drones = []
     for i in range(nb_drones):
         drone_id = str(i + 1)
-        nouveau_drone = Drone(id=drone_id, zone=start_name, connection="start")
+        nouveau_drone = Drone(id=drone_id, zone=start_name, connection="start",
+                              path=[])
         drones.append(nouveau_drone)
 
-    all_hubs[start_name].is_occupied = True
+    all_hubs[start_name].current_drones_count = nb_drones
 
     for drone in drones:
         drone.display()
@@ -45,7 +47,9 @@ def main() -> None:
         objet_hub.display_info()
 
     for ligne_conn in config["connection"]:
-        elements_conn = ligne_conn.split("-", 1)
+        ligne_nettoyee = ligne_conn.split('[')[0].strip()
+        ligne_nettoyee = ligne_nettoyee.replace('-', ' ')
+        elements_conn = ligne_nettoyee.split()
         if len(elements_conn) < 2:
             continue
         nom_a = elements_conn[0]
@@ -60,33 +64,61 @@ def main() -> None:
         voisins = [voisin.name for voisin in hub_obj.connections]
         print(f"Le Hub '{nom}' est connecté à : {voisins}")
 
+    hub_start = all_hubs[start_name]
+    hub_end = all_hubs[end_name]
+
+    for drone in drones:
+        free_path = find_short_path(hub_start, hub_end, ignore_trafic=False)
+        if not free_path:
+            free_path = find_short_path(hub_start, hub_end, ignore_trafic=True)
+        drone.path = free_path[1:]
+        if free_path:
+            for step_name in drone.path:
+                if step_name != end_name:
+                    all_hubs[step_name].current_drones_count += 1
+
+    for nom, hub_obj in all_hubs.items():
+        if nom != start_name and nom != end_name:
+            hub_obj.current_drones_count = 0
+
+    visualizer = GraphVisualizer(all_hubs, drones)
     turn = 0
     sim_run = True
 
     while sim_run:
         turn += 1
         print(f"--- Tour {turn} ---")
+
+        for drone in drones:
+            if len(drone.path) > 0:
+                next_hub_name = drone.path[0]
+                next_hub_object = all_hubs[next_hub_name]
+                if (next_hub_object.current_drones_count <
+                        next_hub_object.max_drones
+                        or next_hub_name == end_name):
+                    if drone.zone != start_name:
+                        all_hubs[drone.zone].current_drones_count -= 1
+                    drone.zone = next_hub_name
+                    if next_hub_name != end_name:
+                        next_hub_object.current_drones_count += 1
+                    drone.path.pop(0)
+                else:
+                    pass
+
         for drone in drones:
             drone.display()
         print()
+
+        visualizer.run_turn()
 
         all_arrived = True
         for drone in drones:
             if drone.zone != end_name:
                 all_arrived = False
+
         if all_arrived:
             sim_run = False
-            print(f"\nTous les drones sont arrivés en {turn} tours.")
-        if turn >= 1:
-            print("\n(Fin du Tour 0 / Initialisation attente de l'algorithme)")
-            break
-
-    hub_depart = all_hubs[start_name]
-    hub_arrivee = all_hubs[end_name]
-    chemin_ideal = find_shortest_path(hub_depart, hub_arrivee)
-
-    for drone in drones:
-        drone.path = chemin_ideal[1:]
+            print(f"\nSimulation terminée avec succès en {turn} tours !")
 
 
 if __name__ == "__main__":
