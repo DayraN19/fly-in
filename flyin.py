@@ -2,7 +2,7 @@ import sys
 from drone import Drone
 from hub import Hub
 from parser import parse_config, parse_hub_line, verify_dict
-from pathfinding import find_short_path
+from pathfinding import find_short_path, get_dynamic_path
 from visualizer import GraphVisualizer
 
 
@@ -68,9 +68,9 @@ def main() -> None:
     hub_end = all_hubs[end_name]
 
     for drone in drones:
-        free_path = find_short_path(hub_start, hub_end, ignore_trafic=False)
+        free_path = find_short_path(hub_start, hub_end, all_hubs)
         if not free_path:
-            free_path = find_short_path(hub_start, hub_end, ignore_trafic=True)
+            free_path = find_short_path(hub_start, hub_end, all_hubs)
         drone.path = free_path[1:]
         if free_path:
             for step_name in drone.path:

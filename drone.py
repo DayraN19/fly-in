@@ -7,7 +7,7 @@ class Drone:
         self.id = id
         self.zone = zone
         self.connection = connection
-        self.path = []
+        self.path: list = []
 
     def display(self) -> Any:
-        print(f"D{self.id}={self.zone}", end=" ")
+        print(f"D{self.id}-{self.zone}", end=" ")

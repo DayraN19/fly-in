@@ -4,7 +4,7 @@ class Hub:
         self.name = name
         self.x = x
         self.y = y
-        self.connections = []
+        self.connections: list = []
         self.color = "Aucune"
         self.max_drones = 1
         self.current_drones_count = 0
