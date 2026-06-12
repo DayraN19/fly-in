@@ -32,19 +32,11 @@ def main() -> None:
     drones = []
     for i in range(nb_drones):
         drone_id = str(i + 1)
-        nouveau_drone = Drone(id=drone_id, zone=start_name, connection="start",
-                              path=[])
+        nouveau_drone = Drone(id=drone_id, zone=start_name,
+                              connection="", path=[])
         drones.append(nouveau_drone)
 
     all_hubs[start_name].current_drones_count = nb_drones
-
-    for drone in drones:
-        drone.display()
-    print()
-
-    print("\n--- Liste des Hubs enregistrés en mémoire ---")
-    for nom_hub, objet_hub in all_hubs.items():
-        objet_hub.display_info()
 
     for ligne_conn in config["connection"]:
         ligne_nettoyee = ligne_conn.split('[')[0].strip()
@@ -64,24 +56,13 @@ def main() -> None:
         voisins = [voisin.name for voisin in hub_obj.connections]
         print(f"Le Hub '{nom}' est connecté à : {voisins}")
 
-    hub_start = all_hubs[start_name]
-    hub_end = all_hubs[end_name]
-
-    for drone in drones:
-        free_path = find_short_path(hub_start, hub_end, all_hubs)
-        if not free_path:
-            free_path = find_short_path(hub_start, hub_end, all_hubs)
-        drone.path = free_path[1:]
-        if free_path:
-            for step_name in drone.path:
-                if step_name != end_name:
-                    all_hubs[step_name].current_drones_count += 1
-
+    # Remise à zéro propre des compteurs avant simulation
     for nom, hub_obj in all_hubs.items():
-        if nom != start_name and nom != end_name:
-            hub_obj.current_drones_count = 0
+        hub_obj.current_drones_count = 0
+    all_hubs[start_name].current_drones_count = nb_drones
 
     visualizer = GraphVisualizer(all_hubs, drones)
+
     turn = 0
     sim_run = True
 
@@ -90,32 +71,80 @@ def main() -> None:
         print(f"--- Tour {turn} ---")
 
         for drone in drones:
+            if drone.transit_turns_left > 0:
+                drone.transit_turns_left -= 1
+                if drone.transit_turns_left == 1 and drone.connection:
+                    next_hub_name = drone.connection
+                    current_hub_object = all_hubs[drone.zone]
+
+                    if drone.zone != start_name:
+                        current_hub_object.current_drones_count -= 1
+                    drone.zone = next_hub_name
+
+                elif drone.transit_turns_left == 0 and drone.connection:
+                    drone.connection = ""
+                    if len(drone.path) > 0 and drone.path[0] == drone.zone:
+                        drone.path.pop(0)
+
+        for drone in drones:
+            if drone.transit_turns_left > 0 or drone.connection:
+                continue
+            dynamic_path = get_dynamic_path(all_hubs[drone.zone],
+                                            all_hubs[end_name], all_hubs)
+            if not dynamic_path:
+                dynamic_path = find_short_path(all_hubs[drone.zone],
+                                               all_hubs[end_name], all_hubs)
+            if dynamic_path:
+                if dynamic_path[0] == drone.zone:
+                    dynamic_path.pop(0)
+                drone.path = dynamic_path
+
+        for drone in drones:
+            if drone.transit_turns_left > 0 or drone.connection:
+                continue
+
             if len(drone.path) > 0:
                 next_hub_name = drone.path[0]
                 next_hub_object = all_hubs[next_hub_name]
-                if (next_hub_object.current_drones_count <
-                        next_hub_object.max_drones
-                        or next_hub_name == end_name):
-                    if drone.zone != start_name:
-                        all_hubs[drone.zone].current_drones_count -= 1
-                    drone.zone = next_hub_name
-                    if next_hub_name != end_name:
+                current_hub_object = all_hubs[drone.zone]
+
+                connected_neighbors = [v.name for v in
+                                       current_hub_object.connections]
+                if (next_hub_name != end_name and
+                        next_hub_name not in connected_neighbors):
+                    continue
+
+                zone_type = getattr(next_hub_object, 'zone_type', 'normal')
+                is_restricted = (zone_type == "restricted" or
+                                 "restricted" in next_hub_name.lower())
+
+                if is_restricted:
+                    # Vérification de place sur le restricted cible
+                    if (next_hub_object.current_drones_count <
+                            int(next_hub_object.max_drones)):
                         next_hub_object.current_drones_count += 1
-                    drone.path.pop(0)
+                        drone.transit_turns_left = 2
+                        drone.connection = next_hub_name
                 else:
-                    pass
+                    if (next_hub_object.current_drones_count <
+                            int(next_hub_object.max_drones) or
+                            next_hub_name == end_name):
+                        if drone.zone != start_name:
+                            current_hub_object.current_drones_count -= 1
+                        if next_hub_name != end_name:
+                            next_hub_object.current_drones_count += 1
+                        drone.zone = next_hub_name
+                        drone.path.pop(0)
 
         for drone in drones:
             drone.display()
         print()
 
+        visualizer.turn = turn
         visualizer.run_turn()
 
-        all_arrived = True
-        for drone in drones:
-            if drone.zone != end_name:
-                all_arrived = False
-
+        all_arrived = all(drone.zone == end_name and
+                          drone.transit_turns_left == 0 for drone in drones)
         if all_arrived:
             sim_run = False
             print(f"\nSimulation terminée avec succès en {turn} tours !")

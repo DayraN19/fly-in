@@ -61,22 +61,16 @@ class GraphVisualizer:
         for hub_name, hub in self.all_hubs.items():
             start_pos = self.to_screen_coords(hub.x, hub.y)
             connections = hub.connections if hasattr(hub, 'connections') else []
-            
             for neighbor in connections:
                 neighbor_obj = neighbor if hasattr(neighbor, 'x') else self.all_hubs[neighbor]
                 end_pos = self.to_screen_coords(neighbor_obj.x, neighbor_obj.y)
-                
-                # Si la connexion mène à une zone restricted, on la dessine en pointillés ou style double-ligne
                 is_active = hub.current_drones_count > 0
                 color = EDGE_ACTIVE if is_active else EDGE_COLOR
                 width = 3 if is_active else 1
                 pygame.draw.line(self.screen, color, start_pos, end_pos, width)
 
-        # 2. DESSIN DES STATIONS
         for hub_name, hub in self.all_hubs.items():
             pos = self.to_screen_coords(hub.x, hub.y)
-            
-            # Diamètres et couleurs selon le type du sujet
             radius = 24
             if hub_name == "start" or hub_name == "impossible_goal":
                 radius = 35
@@ -102,29 +96,55 @@ class GraphVisualizer:
 
     def draw_drones(self):
         for i, drone in enumerate(self.drones):
-            current_hub = self.all_hubs[drone.zone]
-            pos = self.to_screen_coords(current_hub.x, current_hub.y)
+            hub_actuel = self.all_hubs.get(drone.zone)
+            if not hub_actuel:
+                continue
             
-            # Gestion propre de l'orbite pour désengorger le Start et le Goal
-            if drone.zone == "start" or drone.zone == "impossible_goal":
-                num_drones_here = len([d for d in self.drones if d.zone == drone.zone])
-                idx_here = [d for d in self.drones if d.zone == drone.zone].index(drone)
-                
-                angle = (2 * math.pi * idx_here) / (num_drones_here if num_drones_here > 0 else 1)
-                dist = 50 if drone.zone == "impossible_goal" else 45
-                pos = (int(pos[0] + dist * math.cos(angle)), int(pos[1] + dist * math.sin(angle)))
+            pos_start = self.to_screen_coords(hub_actuel.x, hub_actuel.y)
+            
+            # CAS 1 : Le drone est en vol au milieu du lien (transit_turns_left == 2)
+            if getattr(drone, 'transit_turns_left', 0) == 2 and getattr(drone, 'connection', ''):
+                hub_cible = self.all_hubs.get(drone.connection)
+                if hub_cible:
+                    pos_end = self.to_screen_coords(hub_cible.x, hub_cible.y)
+                    # Position mathématique exacte au milieu du segment (0.5)
+                    pos = (
+                        int((pos_start[0] + pos_end[0]) / 2),
+                        int((pos_start[1] + pos_end[1]) / 2)
+                    )
+                else:
+                    pos = pos_start
+                    
+            # CAS 2 : Le drone est sur un hub (Soit posé normalement (0), soit bloqué en attente (1))
             else:
-                # Étalement local en petite grille pour les hubs intermédiaires
-                random.seed(i)
-                pos = (pos[0] + random.randint(-12, 12), pos[1] + random.randint(-12, 12))
+                if drone.zone == "start" or drone.zone == "impossible_goal":
+                    num_drones_here = len([d for d in self.drones if d.zone == drone.zone])
+                    idx_here = [d for d in self.drones if d.zone == drone.zone].index(drone)
+                    angle = (2 * math.pi * idx_here) / (num_drones_here if num_drones_here > 0 else 1)
+                    dist = 50 if drone.zone == "impossible_goal" else 45
+                    pos = (int(pos_start[0] + dist * math.cos(angle)), int(pos_start[1] + dist * math.sin(angle)))
+                else:
+                    random.seed(i)
+                    pos = (pos_start[0] + random.randint(-12, 12),
+                           pos_start[1] + random.randint(-12, 12))
 
-            # Affichage du drone (Cercle Orange vif)
+            # Dessin de la couleur du drone
+            # Optionnel : On le met en rouge/orange s'il est bloqué en attente sur le restricted (transit == 1)
+            color_drone = (231, 76, 60) if getattr(drone, 'transit_turns_left', 0) == 1 else (230, 126, 34)
+
+            pygame.draw.circle(self.screen, color_drone, pos, 9)
+            pygame.draw.circle(self.screen, WHITE, pos, 9, 1)
+
+            drone_id = getattr(drone, 'id', f"{i+1}")
+            self.draw_text(f"D{drone_id}", (pos[0], pos[1] + 16), color=GOLD,
+                           bg_color=color_drone)
+
             pygame.draw.circle(self.screen, (230, 126, 34), pos, 9)
             pygame.draw.circle(self.screen, WHITE, pos, 9, 1)
 
-            # Nom du Drone (D1, D2...)
             drone_id = getattr(drone, 'name', f"D{i+1}")
-            self.draw_text(str(drone_id), (pos[0], pos[1] + 16), color=GOLD, bg_color=(230, 126, 34))
+            self.draw_text(str(drone_id), (pos[0], pos[1] + 16), color=GOLD,
+                           bg_color=(230, 126, 34))
 
     def run_turn(self):
         self.turn += 1
@@ -136,10 +156,10 @@ class GraphVisualizer:
         self.screen.fill(BG_COLOR)
         self.draw_graph()
         self.draw_drones()
-        
+
         if self.has_font:
-            surface = self.title_font.render(f"SIMULATION TOUR : {self.turn}", True, GOLD)
+            surface = self.title_font.render(f"SIMULATION TURN : {self.turn}", True, GOLD)
             self.screen.blit(surface, (30, 25))
 
         pygame.display.flip()
-        self.clock.tick(1) # 4 FPS : vitesse parfaite pour analyser le trafic
+        self.clock.tick(1)
