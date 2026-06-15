@@ -137,7 +137,7 @@ def main() -> None:
                         drone.path.pop(0)
 
         for drone in drones:
-            drone.display()
+            drone.display(start_name, end_name)
         print()
 
         visualizer.turn = turn
