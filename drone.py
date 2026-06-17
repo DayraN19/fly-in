@@ -8,6 +8,9 @@ class Drone:
         self.path: list[str] = path
         self.transit_turns_left: int = 0
         self.has_arrived_reported: bool = False
+        self.total_cost: float = 0.0
+        self.turns_count: int = 0
+        self.is_active: bool = True
 
     def display(self, start_name: str, end_name: str) -> None:
         """Affiche le statut du drone selon ses mouvements.

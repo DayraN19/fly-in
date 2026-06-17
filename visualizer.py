@@ -209,4 +209,4 @@ class GraphVisualizer:
             self.screen.blit(surface, (30, 25))
 
         pygame.display.flip()
-        self.clock.tick(4)
+        self.clock.tick(1)
