@@ -1,5 +1,1 @@
 pygame
-
-#nombre max de drone negatif rien
-#zone_type tout passe
-#
