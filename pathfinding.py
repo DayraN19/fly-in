@@ -8,6 +8,24 @@ if TYPE_CHECKING:
 def find_short_path(
     start_hub: "Hub", end_hub: "Hub", all_hubs: dict[str, "Hub"]
 ) -> Optional[list[str]]:
+    """
+    Find the shortest path between two hubs using Dijkstra's algorithm.
+
+    The path cost depends on the type of each zone:
+    - normal: cost = 1.0
+    - priority: cost = 0.9
+    - restricted: cost = 2.0
+    - blocked: inaccessible
+
+    Args:
+        start_hub (Hub): Starting hub.
+        end_hub (Hub): Destination hub.
+        all_hubs (dict[str, Hub]): Dictionary containing all hubs.
+
+    Returns:
+        Optional[list[str]]: List of hub names representing the path
+            from start to destination, or None if no path exists.
+    """
     queue: list[tuple[float, str, list[str]]] = [
         (0.0, start_hub.name, [start_hub.name])
     ]
@@ -61,6 +79,31 @@ def find_short_path(
 def get_dynamic_path(
     drone_current_hub: "Hub", end_hub: "Hub", all_hubs: dict[str, "Hub"]
 ) -> Optional[list[str]]:
+    """
+    Find the best path while taking hub congestion into account.
+
+    This function extends Dijkstra's algorithm by dynamically
+    increasing the movement cost of congested hubs to reduce
+    traffic and improve drone distribution.
+
+    Zone costs:
+        - normal: cost = 1.0
+        - priority: cost = 0.9
+        - restricted: cost = 2.0
+        - blocked: inaccessible
+
+    Additional congestion penalties are applied when a hub
+    exceeds its maximum drone capacity.
+
+    Args:
+        drone_current_hub (Hub): Current hub of the drone.
+        end_hub (Hub): Destination hub.
+        all_hubs (dict[str, Hub]): Dictionary containing all hubs.
+
+    Returns:
+        Optional[list[str]]: Optimal path as a list of hub names,
+            or None if no valid path exists.
+    """
     queue: list[tuple[float, str, list[str]]] = [
         (0.0, drone_current_hub.name, [drone_current_hub.name])
     ]

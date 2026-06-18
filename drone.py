@@ -1,7 +1,39 @@
 class Drone:
+    """
+    Represents a drone moving through different zones.
+
+    Attributes:
+        id (str): Unique identifier of the drone.
+        zone (str): Current zone where the drone is located.
+        connection (str): Current connection or destination link.
+        path (list[str]): Sequence of zones the drone must follow.
+        transit_turns_left (int): Remaining turns before completing transit.
+        has_arrived_reported (bool): Indicates whether,
+        arrival has already been displayed.
+        total_cost (float): Total cost accumulated by the drone.
+        turns_count (int): Number of turns elapsed for the drone.
+        is_active (bool): Indicates whether the drone is still active.
+    """
+
     def __init__(
-        self, id: str, zone: str, connection: str, path: list[str]
+        self,
+        id: str,
+        zone: str,
+        connection: str,
+        path: list[str]
     ) -> None:
+        """
+        Initialize a Drone instance.
+
+        Args:
+            id (str): Unique identifier of the drone.
+            zone (str): Starting zone of the drone.
+            connection (str): Initial connection of the drone.
+            path (list[str]): List of zones the drone will traverse.
+
+        Returns:
+            None
+        """
         self.id: str = id
         self.zone: str = zone
         self.connection: str = connection
@@ -13,11 +45,19 @@ class Drone:
         self.is_active: bool = True
 
     def display(self, start_name: str, end_name: str) -> None:
-        """Affiche le statut du drone selon ses mouvements.
+        """
+        Display the current state of the drone.
 
-        - Cache le drone s'il est immobile au départ.
-        - Affiche le drone quand il part du départ (en vol/transit).
-        - Affiche le drone le tour exact où il arrive au Goal, puis le cache.
+        The drone is not displayed if it is still at the start
+        without an active connection. Once the drone reaches
+        the destination, it is displayed only once.
+
+        Args:
+            start_name (str): Name of the starting zone.
+            end_name (str): Name of the destination zone.
+
+        Returns:
+            None
         """
         if self.zone == start_name:
             if self.transit_turns_left == 0 and not self.connection:

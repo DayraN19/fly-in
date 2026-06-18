@@ -17,8 +17,33 @@ GOLD = (241, 196, 15)
 
 
 class GraphVisualizer:
+    """
+    Visualize the drone simulation using Pygame.
+
+    This class is responsible for drawing hubs, connections,
+    drones, and updating the display after each simulation turn.
+
+    Attributes:
+        all_hubs (dict[str, Hub]): Dictionary containing all hubs.
+        drones (list[Drone]): List of drones in the simulation.
+        turn (int): Current simulation turn.
+        width (int): Width of the window.
+        height (int): Height of the window.
+        screen (pygame.Surface): Main drawing surface.
+        clock (pygame.time.Clock): Controls the frame rate.
+    """
     def __init__(self, all_hubs: dict[str, "Hub"],
                  drones: list["Drone"]) -> None:
+        """
+    Initialize the graphical visualizer.
+
+    Args:
+        all_hubs (dict[str, Hub]): Dictionary of all hubs.
+        drones (list[Drone]): List of drones to display.
+
+    Returns:
+        None
+    """
         pygame.init()
         self.all_hubs: dict[str, "Hub"] = all_hubs
         self.drones: list["Drone"] = drones
@@ -50,7 +75,16 @@ class GraphVisualizer:
         self.offset_y: int = self.height // 2
 
     def to_screen_coords(self, x: float, y: float) -> tuple[int, int]:
-        """Applique un étalement asymétrique pour aérer la grille"""
+        """
+    Convert world coordinates into screen coordinates.
+
+    Args:
+        x (float): Horizontal position in the graph.
+        y (float): Vertical position in the graph.
+
+    Returns:
+        tuple[int, int]: Coordinates adapted to the screen.
+    """
         screen_x = int(x * self.scale_x + self.offset_x)
         screen_y = int(-y * self.scale_y + self.offset_y)
         return screen_x, screen_y
@@ -62,6 +96,18 @@ class GraphVisualizer:
         color: tuple[int, int, int] = WHITE,
         bg_color: tuple[int, int, int] = (26, 36, 54),
     ) -> None:
+        """
+    Draw text with a colored background.
+
+    Args:
+        text (str): Text to display.
+        pos (tuple[int, int]): Position on the screen.
+        color (tuple[int, int, int]): Text color.
+        bg_color (tuple[int, int, int]): Background color.
+
+    Returns:
+        None
+    """
         if self.has_font:
             surface = self.font.render(text, True, color)
             rect = surface.get_rect(center=pos)
@@ -71,6 +117,14 @@ class GraphVisualizer:
             self.screen.blit(surface, rect)
 
     def draw_graph(self) -> None:
+        """
+    Draw all hubs and their connections.
+
+    Active connections are highlighted, and each hub
+    is displayed with its occupancy information.
+
+    Returns:
+        None"""
         for hub in self.all_hubs.values():
             start_pos = self.to_screen_coords(hub.x, hub.y)
             connections: list["Hub"] = (
@@ -128,12 +182,20 @@ class GraphVisualizer:
             pygame.draw.circle(self.screen, (20, 27, 41), pos, radius)
             pygame.draw.circle(self.screen, color, pos, radius, 3)
 
-            # Étiquette de la station
             max_drones = getattr(hub, "max_drones", 1)
             label = f"{hub_name} [{hub.current_drones_count}/{max_drones}]"
             self.draw_text(label, (pos[0], pos[1] - radius - 14), color=WHITE)
 
     def draw_drones(self) -> None:
+        """
+    Draw drones at their current positions.
+
+    Drones in transit are displayed between two hubs,
+    while stationary drones are drawn around their hub.
+
+    Returns:
+        None
+    """
         for i, drone in enumerate(self.drones):
             hub_actuel = self.all_hubs.get(drone.zone)
             if not hub_actuel:
@@ -192,6 +254,14 @@ class GraphVisualizer:
             )
 
     def run_turn(self) -> None:
+        """
+    Update and display a new simulation frame.
+
+    Processes events, redraws the graph and drones,
+    refreshes the display, and limits the frame rate.
+
+    Returns:
+        None"""
         self.turn += 1
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -209,4 +279,4 @@ class GraphVisualizer:
             self.screen.blit(surface, (30, 25))
 
         pygame.display.flip()
-        self.clock.tick(1)
+        self.clock.tick(8)
