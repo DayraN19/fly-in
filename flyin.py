@@ -88,7 +88,7 @@ def main() -> None:
     try:
         while sim_run:
             turn += 1
-            print(f"--- Tour {turn} ---")
+            print(f"--- Turn {turn} ---")
 
             for drone in drones:
                 if drone.zone == start_name and not drone.connection:
@@ -192,12 +192,12 @@ def main() -> None:
             if all_arrived:
                 sim_run = False
     except KeyboardInterrupt:
-        print("\nArrêt de la simulation")
+        print("\nEnd of the simulation")
         return
 
-    print(f"\nSimulation terminée avec succès en {turn} tours !")
+    print(f"\nSimulation finished in {turn} turns !")
     print("=" * 60)
-    print("                RAPPORT DES MÉTRIQUES SECONDAIRES            ")
+    print("                SECONDARY METRICS EVALUATION           ")
     print("=" * 60)
 
     total_path_cost = sum(drone.total_cost for drone in drones)
@@ -206,9 +206,9 @@ def main() -> None:
     avg_turns = sum_d / div_d
     efficiency = total_moves_executed / turn if turn > 0 else 0.0
 
-    print(f"• Coût total pondéré des chemins : {total_path_cost:.2f}")
-    print(f"• Nombre moyen de tours par drone : {avg_turns:.2f}")
-    print(f"• Efficacité de l'allocation     : {efficiency:.2f} drones/tour")
+    print(f"• Total path cost : {total_path_cost:.2f}")
+    print(f"• Average turns numbers per drone : {avg_turns:.2f}")
+    print(f"• Numbers of drones moved per turn : {efficiency:.2f} drones/turn")
     print("=" * 60)
 
 
