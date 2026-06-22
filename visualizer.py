@@ -1,7 +1,8 @@
 import math
 import random
+import pygame.font
 import sys
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 import pygame
 
@@ -9,8 +10,10 @@ if TYPE_CHECKING:
     from drone import Drone
     from hub import Hub
 
-BG_COLOR = (11, 16, 25)
-EDGE_COLOR = (52, 73, 94)
+BG_COLOR = (15, 21, 32)
+EDGE_COLOR = (41, 56, 84)
+EDGE_GLOW = (52, 152, 219)
+TEXT_COLOR = (236, 240, 241)
 EDGE_ACTIVE = (46, 134, 193)
 WHITE = (255, 255, 255)
 GOLD = (241, 196, 15)
@@ -58,6 +61,19 @@ class GraphVisualizer:
 
         self.clock: pygame.time.Clock = pygame.time.Clock()
 
+        try:
+            # Initialisation explicite du module de police de pygame
+            pygame.font.init()
+
+            # Utilisation de la police par défaut de Pygame (None) pour éviter les crashs de SysFont
+            self.font = pygame.font.Font(None, 28)
+            self.small_font = pygame.font.Font(None, 18)
+            self.has_font = True
+        except Exception as e:
+            print(f"[Visualizer] Mode de secours activé sans texte : {e}")
+            self.font = None
+            self.small_font = None
+            self.has_font = False
         try:
             self.font: pygame.font.Font = pygame.font.SysFont(
                 "Arial", 13, bold=True
@@ -125,66 +141,96 @@ class GraphVisualizer:
 
     Returns:
         None"""
-        for hub in self.all_hubs.values():
+        COLOR_MAP = {
+            "vert": (46, 204, 113),
+            "bleu": (52, 152, 219),
+            "rouge": (231, 76, 60),
+            "violet": (155, 89, 182),
+            "orange": (230, 126, 34),
+            "jaune": (241, 196, 15),
+            "blanc": (236, 240, 241),
+            "gris": (127, 140, 141),
+            "noir": (22, 30, 46)
+        }
+
+        # 1. Dessin des lignes (Connexions)
+        for hub_name, hub in self.all_hubs.items():
             start_pos = self.to_screen_coords(hub.x, hub.y)
-            connections: list["Hub"] = (
-                hub.connections
-                if hasattr(hub, "connections")
-                else []
-            )
+            connections = hub.connections if hasattr(hub, 'connections') else []
+            
             for neighbor in connections:
-                neighbor_obj: Optional["Hub"] = None
-                if hasattr(neighbor, "x") and hasattr(neighbor, "y"):
-                    neighbor_obj = neighbor
-                elif isinstance(neighbor, str):
-                    neighbor_obj = self.all_hubs.get(neighbor)
+                neighbor_obj = neighbor if hasattr(neighbor, 'x') else self.all_hubs[neighbor]
+                end_pos = self.to_screen_coords(neighbor_obj.x, neighbor_obj.y)
+                
+                if hub.current_drones_count > 0:
+                    pygame.draw.line(self.screen, EDGE_GLOW, start_pos, end_pos, 4)
+                else:
+                    pygame.draw.line(self.screen, EDGE_COLOR, start_pos, end_pos, 2)
 
-                if neighbor_obj is None:
-                    continue
-
-                end_pos = self.to_screen_coords(
-                    neighbor_obj.x, neighbor_obj.y
-                )
-                is_active = hub.current_drones_count > 0
-                color = EDGE_ACTIVE if is_active else EDGE_COLOR
-                width = 3 if is_active else 1
-                pygame.draw.line(
-                    self.screen, color, start_pos, end_pos, width
-                )
-
+        # 2. Dessin des cercles (Stations)
         for hub_name, hub in self.all_hubs.items():
             pos = self.to_screen_coords(hub.x, hub.y)
-            radius = 24
-            if hub_name in ("start", "impossible_goal"):
-                radius = 35
+            base_color = None
+            
+            # --- LECTURE INTELLIGENTE DE LA COULEUR DES MÉTADONNÉES ---
+            if hasattr(hub, 'color') and hub.color:
+                if isinstance(hub.color, str):
+                    clean_color = hub.color.strip().lower()
+                    
+                    # Cas 1 : C'est un nom de couleur en français (ex: "vert")
+                    if clean_color in COLOR_MAP:
+                        base_color = COLOR_MAP[clean_color]
+                    # Cas 2 : C'est du Hex (ex: "#FF0000" ou "0xFF0000")
+                    else:
+                        try:
+                            hex_color = clean_color.lstrip('#').replace('0x', '')
+                            base_color = tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+                        except ValueError:
+                            base_color = None # En cas de chaîne corrompue, on laisse le fallback agir
+                
+                elif isinstance(hub.color, (tuple, list)) and len(hub.color) == 3:
+                    base_color = hub.color # Déjà un format RGB (R, G, B)
 
+            # Si aucune couleur n'a été trouvée ou valide dans la métadonnée, couleur par défaut :
+            if base_color is None:
+                if hub_name == "start":
+                    base_color = (46, 204, 113)  # Vert de secours
+                elif "goal" in hub_name or hub_name == "impossible_goal":
+                    base_color = (155, 89, 182) # Violet de secours
+                elif hub.max_drones == 1:
+                    base_color = (231, 76, 60)   # Rouge Goulot
+                else:
+                    base_color = (52, 152, 219)  # Bleu standard
+
+            # Dimensionnement des stations
             if hub_name == "start":
-                color = (46, 204, 113)
-            elif hub_name == "impossible_goal":
-                color = (155, 89, 182)
-            elif "gate_hell" in hub_name:
-                color = (231, 76, 60)
-            elif "trap" in hub_name:
-                color = (142, 68, 173)
-            elif "dead" in hub_name:
-                color = (44, 62, 80)
-            elif "loop" in hub_name:
-                color = (211, 84, 0)
-            elif "overflow" in hub_name:
-                color = (192, 57, 43)
-            elif "false_hope" in hub_name or "priority" in hub_name:
-                color = (241, 196, 15)
-            elif "conv_restricted" in hub_name:
-                color = (120, 40, 40)
+                radius = 35
+            elif "goal" in hub_name or hub_name == "impossible_goal":
+                radius = 40
             else:
-                color = (52, 152, 219)
+                radius = 25
 
-            pygame.draw.circle(self.screen, (20, 27, 41), pos, radius)
-            pygame.draw.circle(self.screen, color, pos, radius, 3)
+            # Effet d'aura lumineuse si des drones sont présents
+            if hub.current_drones_count > 0:
+                pygame.draw.circle(self.screen, [min(c + 50, 255) for c in base_color], pos, radius + 4, 2)
+            
+            # Rendu visuel de la station
+            pygame.draw.circle(self.screen, (22, 30, 46), pos, radius)
+            pygame.draw.circle(self.screen, base_color, pos, radius, 4)
+            pygame.draw.circle(self.screen, base_color, pos, radius - 8, 1)
+            
+            # Jauge de remplissage interne (Capacité)
+            if hub_name != "start" and hub_name != "impossible_goal":
+                fill_ratio = hub.current_drones_count / hub.max_drones
+                if fill_ratio > 0:
+                    gauge_color = (230, 126, 34) if fill_ratio < 1 else (231, 76, 60)
+                    pygame.draw.circle(self.screen, gauge_color, pos, int((radius - 10) * fill_ratio))
 
-            max_drones = getattr(hub, "max_drones", 1)
-            label = f"{hub_name} [{hub.current_drones_count}/{max_drones}]"
-            self.draw_text(label, (pos[0], pos[1] - radius - 14), color=WHITE)
+            # Affichage du texte si disponible
+            if self.has_font and self.small_font:
+                lbl_color = (241, 196, 15) if hub.current_drones_count > 0 else TEXT_COLOR
+                txt = self.small_font.render(f"{hub_name} ({hub.current_drones_count}/{hub.max_drones})", True, lbl_color)
+                self.screen.blit(txt, (pos[0] - 40, pos[1] - radius - 20))
 
     def draw_drones(self) -> None:
         """
@@ -279,4 +325,4 @@ class GraphVisualizer:
             self.screen.blit(surface, (30, 25))
 
         pygame.display.flip()
-        self.clock.tick(8)
+        self.clock.tick(2)

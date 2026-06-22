@@ -1,1 +1,2 @@
 pygame
+### couleur/ parsing : meme coord / meme nom / duplique / metedata / [non ferme / nbr drone premiere ligne / POO parser class

@@ -22,7 +22,7 @@ The goal is to deliver all drones to the end zone as fast as possible, while pro
 ### Requirements
 
 - Python 3.10 or later
-- [List any dependencies here, e.g. `rich`, `colorama`, `pygame`... or "No external dependencies" if applicable]
+- [`pygame`]
 
 ### Installation
 
@@ -30,15 +30,13 @@ The goal is to deliver all drones to the end zone as fast as possible, while pro
 make install
 ```
 
-[Describe what this actually does in your project — e.g. creates a venv and installs requirements via pip/uv/pipx.]
+
 
 ### Running the simulation
 
 ```bash
 make run
 ```
-
-[Specify how the map file is passed in — e.g. `python3 main.py maps/easy_2.txt` — and any CLI flags you support (visual mode, verbose output, etc.).]
 
 ### Debug mode
 
@@ -74,7 +72,6 @@ Removes `__pycache__`, `.mypy_cache`, and other temporary artifacts.
 
 ### Parsing
 
-[Describe how the map file is parsed and validated: zone/connection objects, metadata handling, error reporting on malformed input.]
 
 ### Pathfinding
 
@@ -83,60 +80,39 @@ Removes `__pycache__`, `.mypy_cache`, and other temporary artifacts.
 - **Complexity:** [State the time/space complexity, e.g. O(E log V) per drone, or for the whole fleet]
 - **Path caching:** [Do you recompute paths every turn, cache them, or recompute only on conflict? Explain the trade-off.]
 
-### Turn-by-turn scheduling
-
-[Explain how you coordinate multiple drones moving simultaneously: how you detect and resolve zone/connection capacity conflicts, how deadlocks are avoided, how drones are made to wait strategically, and how multi-turn movement into restricted zones is handled (no waiting mid-connection).]
-
-### Design choices / object-oriented structure
-
-[Briefly describe your main classes (e.g. `Zone`, `Connection`, `Drone`, `Map`, `Simulator`, `Scheduler`) and how responsibilities are split between them.]
-
-## Visual Representation
-
-[Describe what you implemented: colored terminal output and/or a graphical interface.]
-
-- **Mode:** [Terminal / GUI / Both]
-- **What it shows:** [Drone positions per turn, zone colors matching the metadata, occupancy/capacity indicators, etc.]
-- **Why it helps:** [Explain how this visual feedback makes it easier to follow the simulation and verify correctness during peer review.]
-
-[If you have screenshots or a short demo GIF, add them here.]
 
 ## Performance
 
-[Optional but recommended — fill in the turn counts you actually achieve on the provided maps, compared to the benchmark targets.]
+
 
 | Map | Drones | Target (turns) | Your result |
 |---|---|---|---|
-| Easy — Linear path | 2 | ≤ 6 | [ ] |
-| Easy — Simple fork | 4 | ≤ 8 | [ ] |
-| Easy — Basic capacity | 4 | ≤ 6 | [ ] |
-| Medium — Dead end trap | 5 | ≤ 12 | [ ] |
-| Medium — Circular loop | 6 | ≤ 15 | [ ] |
-| Medium — Priority puzzle | 5 | ≤ 12 | [ ] |
-| Hard — Maze nightmare | 8 | ≤ 30 | [ ] |
-| Hard — Capacity hell | 12 | ≤ 35 | [ ] |
-| Hard — Ultimate challenge | 15 | ≤ 45 | [ ] |
-| Challenger — The Impossible Dream (bonus) | 25 | ≤ 45 (record) | [ ] |
+| Easy — Linear path | 2 | ≤ 6 | [4] |
+| Easy — Simple fork | 4 | ≤ 8 | [6] |
+| Easy — Basic capacity | 4 | ≤ 6 | [4] |
+| Medium — Dead end trap | 5 | ≤ 12 | [8] |
+| Medium — Circular loop | 6 | ≤ 15 | [15] |
+| Medium — Priority puzzle | 5 | ≤ 12 | [7] |
+| Hard — Maze nightmare | 8 | ≤ 30 | [14] |
+| Hard — Capacity hell | 12 | ≤ 35 | [17] |
+| Hard — Ultimate challenge | 15 | ≤ 45 | [30] |
+| Challenger — The Impossible Dream (bonus) | 25 | ≤ 45 (record) | [74] |
 
 ## Resources
 
 ### References
 
-[List the classic references you actually used, for example:]
-
 - [Dijkstra's algorithm — Wikipedia / original paper]
 - [A* search algorithm — documentation or article]
 - [Python `typing` and `mypy` documentation]
-- [Any article/tutorial on multi-agent pathfinding or scheduling you consulted]
 
 ### AI usage
 
-[This section is mandatory. Be specific and honest about what you used AI for. Example structure below — replace with what actually happened on your project.]
 
 AI tools were used during this project for the following tasks:
 
-- **[Task, e.g. brainstorming pathfinding strategies]:** [What you asked, what you got, how you validated/adapted it]
-- **[Task, e.g. debugging a specific scheduling conflict]:** [Same]
-- **[Task, e.g. reviewing docstring/PEP 257 formatting]:** [Same]
+- **[Task, e.g. brainstorming pathfinding strategies]:** 
+- **[Task, e.g. debugging a specific scheduling conflict]:** 
+- **[Task, e.g. reviewing docstring/PEP 257 formatting]:**
 
 AI-generated suggestions were reviewed, tested, and discussed with peers before being integrated. No code was used without being fully understood by the team.
