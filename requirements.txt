@@ -1,2 +1,19 @@
 pygame
-### couleur/ parsing : meme coord / meme nom / duplique / metedata / [non ferme / nbr drone premiere ligne / POO parser class
+### couleur/ parsing : /espace dans le nom/int valide/ duplique / metedata / [non ferme / nbr drone premiere ligne / POO parser class
+#• The first line must define the number of drones using nb_drones:
+<positive_integer>.
+
+
+• Connections must link only previously defined zones using connection:
+[metadata].
+<zone1>-<zone2>
+• The same connection must not appear more than once (e.g., a-b and b-a are con-
+sidered duplicates).
+• Any metadata block (e.g., [zone=... color=...] for zones, [max_link_capacity=...]
+for connections) must be syntactically valid.
+• Zone types must be one of: normal, blocked, restricted, priority. Any invalid
+type must raise a parsing error.
+• Capacity values (max_drones for zones, max_link_capacity for connections) must
+be positive integers.
+• Any other parsing error must stop the program and return a clear error message
+indicating the line and cause.

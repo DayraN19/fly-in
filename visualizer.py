@@ -177,30 +177,28 @@ class GraphVisualizer:
                 if isinstance(hub.color, str):
                     clean_color = hub.color.strip().lower()
                     
-                    # Cas 1 : C'est un nom de couleur en français (ex: "vert")
                     if clean_color in COLOR_MAP:
                         base_color = COLOR_MAP[clean_color]
-                    # Cas 2 : C'est du Hex (ex: "#FF0000" ou "0xFF0000")
                     else:
                         try:
                             hex_color = clean_color.lstrip('#').replace('0x', '')
                             base_color = tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
                         except ValueError:
-                            base_color = None # En cas de chaîne corrompue, on laisse le fallback agir
-                
-                elif isinstance(hub.color, (tuple, list)) and len(hub.color) == 3:
-                    base_color = hub.color # Déjà un format RGB (R, G, B)
+                            base_color = None
 
-            # Si aucune couleur n'a été trouvée ou valide dans la métadonnée, couleur par défaut :
+                elif isinstance(hub.color, (tuple, list)) and len(hub.color) == 3:
+                    base_color = hub.color
+
+            # Couleurs de secours (fallback)
             if base_color is None:
                 if hub_name == "start":
-                    base_color = (46, 204, 113)  # Vert de secours
+                    base_color = (46, 204, 113)
                 elif "goal" in hub_name or hub_name == "impossible_goal":
-                    base_color = (155, 89, 182) # Violet de secours
+                    base_color = (155, 89, 182)
                 elif hub.max_drones == 1:
-                    base_color = (231, 76, 60)   # Rouge Goulot
+                    base_color = (231, 76, 60)
                 else:
-                    base_color = (52, 152, 219)  # Bleu standard
+                    base_color = (52, 152, 219)
 
             # Dimensionnement des stations
             if hub_name == "start":
@@ -219,14 +217,24 @@ class GraphVisualizer:
             pygame.draw.circle(self.screen, base_color, pos, radius, 4)
             pygame.draw.circle(self.screen, base_color, pos, radius - 8, 1)
             
-            # Jauge de remplissage interne (Capacité)
-            if hub_name != "start" and hub_name != "impossible_goal":
+            # --- CORRECTION : JAUGE DE REMPLISSAGE POUR TOUS LES HUBS ---
+            if hub.max_drones > 0:
                 fill_ratio = hub.current_drones_count / hub.max_drones
+                # On sature le ratio à 1.0 max au cas où la population temporaire dépasse max_drones
+                fill_ratio = min(1.0, fill_ratio) 
+                
                 if fill_ratio > 0:
-                    gauge_color = (230, 126, 34) if fill_ratio < 1 else (231, 76, 60)
+                    # Choix de la couleur de la jauge interne
+                    if hub_name == "start":
+                        gauge_color = (39, 174, 96)      # Vert sombre
+                    elif "goal" in hub_name or hub_name == "impossible_goal":
+                        gauge_color = (142, 68, 173)     # Violet sombre
+                    else:
+                        gauge_color = (230, 126, 34) if fill_ratio < 1 else (231, 76, 60)
+                    
                     pygame.draw.circle(self.screen, gauge_color, pos, int((radius - 10) * fill_ratio))
 
-            # Affichage du texte si disponible
+            # Affichage du texte textuel mis à jour (Compteur en temps réel)
             if self.has_font and self.small_font:
                 lbl_color = (241, 196, 15) if hub.current_drones_count > 0 else TEXT_COLOR
                 txt = self.small_font.render(f"{hub_name} ({hub.current_drones_count}/{hub.max_drones})", True, lbl_color)

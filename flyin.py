@@ -37,23 +37,66 @@ def main() -> None:
     try:
         config = parse_config(sys.argv[1])
         verify_dict(config)
+
+        all_hubs: dict[str, Hub] = {}
+        seen_names: dict[str, int] = {}
+        seen_coords: set[tuple[int, int]] = set()
+        start_line = config["start_hub"][0]
+        (start_raw_name, start_x, start_y,
+         start_color) = parse_hub_line(start_line)
+        seen_names[start_raw_name] = 1
+        start_name = start_raw_name
+        all_hubs[start_name] = Hub(start_name, start_x, start_y, start_color)
+
+        if " " in start_raw_name or "-" in start_raw_name:
+            raise ValueError(f"Zone name '{start_raw_name}' contains invalid "
+                             f"characters (spaces or dashes are forbidden).")
+
+        if (start_x, start_y) in seen_coords:
+            raise ValueError(f"Hubs cannot have the same "
+                             f"positions {start_x}, {start_y})")
+        seen_coords.add((start_x, start_y))
+
+        for ligne_hub in config["hub"]:
+            nom, x, y, couleur = parse_hub_line(ligne_hub)
+
+            if " " in nom or "-" in nom:
+                raise ValueError(f"Zone name '{nom}' contains invalid "
+                                 f"characters.")
+
+            if (x, y) in seen_coords:
+                raise ValueError(f"Hubs cannot have the same "
+                                 f"positions {x}, {y})")
+            seen_coords.add((x, y))
+
+            if nom in seen_names:
+                seen_names[nom] += 1
+                print(f"Hubs {nom} cannot have the same name")
+                return
+            else:
+                seen_names[nom] = 1
+            all_hubs[nom] = Hub(nom, x, y, couleur)
+
+        end_line = config["end_hub"][0]
+        end_name, end_x, end_y, end_color = parse_hub_line(end_line)
+        all_hubs[end_name] = Hub(end_name, end_x, end_y, end_color)
+
+        if " " in end_name or "-" in end_name:
+            raise ValueError(f"Zone name '{end_name}' contains invalid "
+                             f"characters")
+
+        if (end_x, end_y) in seen_coords:
+            raise ValueError(f"Hubs cannot have the same "
+                             f"positions {end_x}, {end_y})")
+        seen_coords.add((end_x, end_y))
+
+        if nom == end_name:
+            print(f"Hubs {nom} cannot have the same name")
+            return
+
     except Exception as e:
-        print(e)
+        print(f"Error: {e}")
         return
-
-    all_hubs: dict[str, Hub] = {}
-
-    start_line = config["start_hub"][0]
-    start_name, start_x, start_y, start_color = parse_hub_line(start_line)
-    all_hubs[start_name] = Hub(start_name, start_x, start_y, start_color)
-
-    for ligne_hub in config["hub"]:
-        nom, x, y, couleur = parse_hub_line(ligne_hub)
-        all_hubs[nom] = Hub(nom, x, y, couleur)
-
-    end_line = config["end_hub"][0]
-    end_name, end_x, end_y, end_color = parse_hub_line(end_line)
-    all_hubs[end_name] = Hub(end_name, end_x, end_y, end_color)
 
     nb_drones = int(config["nb_drones"][0])
     drones: list[Drone] = []
