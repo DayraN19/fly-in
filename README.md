@@ -66,10 +66,6 @@ make clean
 
 Removes `__pycache__`, `.mypy_cache`, and other temporary artifacts.
 
-## Algorithm and Implementation Strategy
-
-[This section is mandatory — describe your actual choices in detail. Suggested structure below.]
-
 ### Parsing
 
 

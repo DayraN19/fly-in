@@ -23,6 +23,7 @@ class Hub:
         name: str,
         x: Union[int, float, str],
         y: Union[int, float, str],
+        option_str: str,
         metadata_or_max: Union[int, float, str] = 1,
         zone_type: str = "normal",
     ) -> None:
@@ -46,17 +47,28 @@ class Hub:
         self.name: str = name
         self.x: float = float(x)
         self.y: float = float(y)
+        self.color = option_str
         self.zone_type: str = zone_type
         self.current_drones_count: int = 0
         self.connections: list["Hub"] = []
         self.max_drones: int = 1
 
+        if option_str:
+            max_match = re.search(r'max_drones\s*=\s*([0-9]+)', option_str)
+            if max_match:
+                self.max_drones = int(max_match.group(1))
+    
+            type_match = re.search(r'zone_type\s*=\s*([a-zA-Z]+)', option_str)
+            if type_match:
+                self.zone_type = type_match.group(1).lower()
+
+        # 2. Rétrocompatibilité ou traitement alternatif via metadata_or_max
         if isinstance(metadata_or_max, (int, float)):
             self.max_drones = int(metadata_or_max)
         elif isinstance(metadata_or_max, str):
-            max_match = re.search(r"max_drones=(\d+)", metadata_or_max)
-            if max_match:
-                self.max_drones = int(max_match.group(1))
+            m_match = re.search(r"max_drones=(\d+)", metadata_or_max)
+            if m_match:
+                self.max_drones = int(m_match.group(1))
             elif metadata_or_max.isdigit():
                 self.max_drones = int(metadata_or_max)
 

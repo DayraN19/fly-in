@@ -1,5 +1,5 @@
 pygame
-### couleur/ parsing : /espace dans le nom/int valide/ duplique / metedata / [non ferme / nbr drone premiere ligne / POO parser class
+### couleur/ parsing : /int valide/ duplique / metedata / [non ferme / nbr drone premiere ligne / POO parser class
 #• The first line must define the number of drones using nb_drones:
 <positive_integer>.
 
