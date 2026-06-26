@@ -1,14 +1,7 @@
-"""
-Main module of the drone routing simulation.
-
-This module initializes the simulation environment,
-executes drone movements across the network, and
-displays simulation statistics.
-"""
 import sys
 from drone import Drone
 from hub import Hub
-from parser import parse_config, parse_hub_line, verify_dict
+from parser import Parser
 from pathfinding import find_short_path, get_dynamic_path
 from visualizer import GraphVisualizer
 
@@ -34,16 +27,18 @@ def main() -> None:
         Exception: Any exception raised during configuration parsing
             or validation is caught and printed.
     """
+    file = sys.argv[1]
+    parse = Parser()
     try:
-        config = parse_config(sys.argv[1])
-        verify_dict(config)
+        config = parse.parse_config(file)
+        parse.verify_dict()
 
         all_hubs: dict[str, Hub] = {}
         seen_names: dict[str, int] = {}
         seen_coords: set[tuple[int, int]] = set()
         start_line = config["start_hub"][0]
         (start_raw_name, start_x, start_y,
-         start_color) = parse_hub_line(start_line)
+         start_color) = parse.parse_hub_line(start_line)
         seen_names[start_raw_name] = 1
         start_name = start_raw_name
         all_hubs[start_name] = Hub(start_name, start_x, start_y, start_color)
@@ -58,7 +53,7 @@ def main() -> None:
         seen_coords.add((start_x, start_y))
 
         for ligne_hub in config["hub"]:
-            nom, x, y, couleur = parse_hub_line(ligne_hub)
+            nom, x, y, couleur = parse.parse_hub_line(ligne_hub)
 
             if " " in nom or "-" in nom:
                 raise ValueError(f"Zone name '{nom}' contains invalid "
@@ -78,7 +73,7 @@ def main() -> None:
             all_hubs[nom] = Hub(nom, x, y, couleur)
 
         end_line = config["end_hub"][0]
-        end_name, end_x, end_y, end_color = parse_hub_line(end_line)
+        end_name, end_x, end_y, end_color = parse.parse_hub_line(end_line)
         all_hubs[end_name] = Hub(end_name, end_x, end_y, end_color)
 
         if " " in end_name or "-" in end_name:

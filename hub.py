@@ -57,12 +57,11 @@ class Hub:
             max_match = re.search(r'max_drones\s*=\s*([0-9]+)', option_str)
             if max_match:
                 self.max_drones = int(max_match.group(1))
-    
+
             type_match = re.search(r'zone_type\s*=\s*([a-zA-Z]+)', option_str)
             if type_match:
                 self.zone_type = type_match.group(1).lower()
 
-        # 2. Rétrocompatibilité ou traitement alternatif via metadata_or_max
         if isinstance(metadata_or_max, (int, float)):
             self.max_drones = int(metadata_or_max)
         elif isinstance(metadata_or_max, str):

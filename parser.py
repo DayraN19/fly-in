@@ -1,194 +1,207 @@
 import re
 
 
-def parse_config(filename: str) -> dict[str, list[str]]:
-    """
-    Parse and strictly validate a configuration file.
+class Parser:
+    """A parser class to clean, validate, and structure map configurations."""
+    def __init__(self) -> None:
+        """Initialize the parser state for a single file validation."""
+        self.dict_file: dict[str, list[str]] = {
+            "nb_drones": [],
+            "start_hub": [],
+            "hub": [],
+            "end_hub": [],
+            "connection": []
+        }
+        self.seen_connections: set[tuple[str, str]] = set()
+        self.defined_zones: set[str] = set()
+        self.first_active_line: bool = True
+        self.int_max: int = 2147483647
+        self.int_min: int = -2147483647
 
-    Ensures the first active line defines 'nb_drones',
+    def validate_metadata_syntax(self, meta_str: str, line_idx: int) -> None:
+        """Verify that a metadata block [key=value] is syntactically valid."""
+        if not meta_str:
+            return
+        pairs = meta_str.split()
+        for pair in pairs:
+            if "=" not in pair or pair.startswith("=") or pair.endswith("="):
+                raise ValueError(
+                    f"Line {line_idx}: Invalid metadata syntax "
+                    f"near '{pair}'. Expected 'key=value'."
+                )
 
-    validates metadata syntax,
+    def _parse_zone(self, clean_value: str, line_idx: int) -> None:
+        """Parse and validate start_hub, hub, and end_hub entries."""
+        parts = clean_value.split('[', 1)
+        main_part = parts[0].split()
 
-    checks for duplicate connections, and enforces data types.
+        if len(main_part) < 3:
+            raise ValueError(
+                f"Line {line_idx}: Invalid zone format. "
+                f"Expected 'name X Y [metadata]'."
+            )
+        if len(main_part) > 3:
+            bad_name = " ".join(main_part[:-2])
+            raise ValueError(
+                f"Line {line_idx}: Zone name '{bad_name}' contains spaces."
+            )
 
-    Args:
-        filename (str): Path to the configuration file.
+        zone_name = main_part[0]
+        if "-" in zone_name:
+            raise ValueError(
+                f"Line {line_idx}: Zone name '{zone_name}' contains a dash."
+            )
+        try:
+            x_3 = int(main_part[1])
+            y_3 = int(main_part[2])
+        except Exception:
+            raise ValueError("Number is not an int")
 
-    Returns:
-        dict[str, list[str]]: Parsed and validated configuration fields.
+        if (x_3 > self.int_max or x_3 < self.int_min or y_3 > self.int_max
+                or y_3 < self.int_min):
+            raise ValueError(f"Line {line_idx}: Coordinates exceed INT_MIN"
+                             f" or MAX")
 
-    Raises:
-        ValueError: If any parsing or validation rule is violated.
-    """
-    dict_file: dict[str, list[str]] = {
-        "nb_drones": [], "start_hub": [], "hub": [], "end_hub": [],
-        "connection": []
-    }
+        if len(parts) > 1:
+            meta_str = parts[1].rstrip(']').strip()
+            self.validate_metadata_syntax(meta_str, line_idx)
 
-    seen_connections: set[tuple[str, str]] = set()
-    defined_zones: set[str] = set()
-    first_active_line = True
+            type_match = re.search(r'zone_type\s*=\s*([a-zA-Z0-9_-]+)',
+                                   meta_str)
+            if type_match:
+                z_type = type_match.group(1)
+                if z_type not in ["normal", "blocked", "restricted",
+                                  "priority"]:
+                    raise ValueError(
+                        f"Line {line_idx}: Invalid zone type '{z_type}'."
+                    )
 
-    try:
-        with open(filename, "r") as f:
-            for line_idx, raw_line in enumerate(f, 1):
-                clean_line = raw_line.strip()
-                if clean_line == "" or clean_line.startswith("#"):
-                    continue
+            cap_match = re.search(r'max_drones\s*=\s*([a-zA-Z0-9_-]+)',
+                                  meta_str)
+            if cap_match:
+                z_cap = cap_match.group(1)
+                if not z_cap.isdigit() or int(z_cap) <= 0:
+                    raise ValueError(
+                        f"Line {line_idx}: 'max_drones' must be positive."
+                    )
 
-                if first_active_line:
-                    if not clean_line.startswith("nb_drones:"):
-                        raise ValueError(f"Line {line_idx}: First active line"
-                                         f" must define 'nb_drones'.")
-                    first_active_line = False
+        self.defined_zones.add(zone_name)
 
-                if ":" not in clean_line:
-                    raise ValueError(f"Line {line_idx}: Invalid syntax."
-                                     f" Expected 'key: value'.")
+    def _parse_connection(self, clean_value: str, line_idx: int) -> None:
+        """Parse and validate connection pathways between hubs."""
+        parts = clean_value.split('[', 1)
+        conn_part = parts[0].strip()
 
-                key, value = clean_line.split(":", 1)
-                clean_key = key.strip()
-                clean_value = value.strip()
+        if "-" not in conn_part:
+            raise ValueError(
+                f"Line {line_idx}: Invalid connection format."
+            )
 
-                if clean_key not in dict_file:
-                    raise ValueError(f"Line {line_idx}: Unknown configuration"
-                                     f" key '{clean_key}'.")
+        if len(parts) > 1:
+            meta_str = parts[1].rstrip(']').strip()
+            self.validate_metadata_syntax(meta_str, line_idx)
+            pat = r'max_link_capacity\s*=\s*([a-zA-Z0-9_-]+)'
+            cap_match = re.search(pat, meta_str)
+            if cap_match:
+                l_cap = cap_match.group(1)
+                if not l_cap.isdigit() or int(l_cap) <= 0:
+                    raise ValueError(
+                        f"Line {line_idx}: 'max_link_capacity' must be > 0."
+                    )
 
-                if clean_key == "nb_drones":
-                    if dict_file["nb_drones"]:
-                        raise ValueError(f"Line {line_idx}: 'nb_drones' can"
-                                         f" only be defined once.")
-                    if not clean_value.isdigit() or int(clean_value) <= 0:
-                        raise ValueError(f"Line {line_idx}: 'nb_drones' must"
-                                         f" be a positive integer.")
-                    dict_file[clean_key].append(clean_value)
+        nodes = conn_part.split("-")
+        if len(nodes) != 2:
+            raise ValueError(
+                f"Line {line_idx}: Connection must link exactly two zones."
+            )
+        node_a, node_b = nodes[0].strip(), nodes[1].strip()
 
-                elif clean_key in ["start_hub", "hub", "end_hub"]:
-                    parts = clean_value.split('[', 1)
-                    main_part = parts[0].split()
+        if (node_a not in self.defined_zones
+                or node_b not in self.defined_zones):
+            raise ValueError(
+                f"Line {line_idx}: Connection links undefined zones."
+            )
 
-                    if len(main_part) < 3:
-                        raise ValueError(f"Line {line_idx}: Invalid zone"
-                                         f" format. Expected 'name X Y"
-                                         f" [metadata]'.")
-                    if len(main_part) > 3:
-                        bad_name = " ".join(main_part[:-2])
-                        raise ValueError(f"Line {line_idx}: Zone name"
-                                         f" '{bad_name}' contains spaces .")
+        conn_tuple = (node_a, node_b) if node_a < node_b else (node_b, node_a)
+        if conn_tuple in self.seen_connections:
+            raise ValueError(
+                f"Line {line_idx}: Duplicate connection detected."
+            )
+        self.seen_connections.add(conn_tuple)
 
-                    zone_name = main_part[0]
-                    if "-" in zone_name:
-                        raise ValueError(f"Line {line_idx}: Zone name"
-                                         f" '{zone_name}' contains a dash.")
+    def verify_dict(self) -> None:
+        """Verify that vital configuration sections aren't missing or empty."""
+        req = ["nb_drones", "start_hub", "hub", "end_hub", "connection"]
+        for word in req:
+            if word not in self.dict_file or len(self.dict_file[word]) == 0:
+                raise ValueError(
+                    f"Configuration is missing crucial section: '{word}'."
+                )
 
-                    if len(parts) > 1:
-                        meta_str = parts[1].rstrip(']').strip()
-                        validate_metadata_syntax(meta_str, line_idx)
-                        pattern_3 = r'zone_type\s*=\s*([a-zA-Z0-9_-]+)'
-                        type_match = re.search(pattern_3, meta_str)
-                        if type_match:
-                            z_type = type_match.group(1)
-                            if z_type not in ["normal", "blocked",
-                                              "restricted", "priority"]:
-                                raise ValueError(f"Line {line_idx}: Invalid"
-                                                 f" zone type '{z_type}'. Must"
-                                                 f" be normal, blocked,"
-                                                 f" restricted, or priority.")
+    def parse_config(self, filename: str) -> dict[str, list[str]]:
+        """Parse and strictly validate a configuration file."""
+        try:
+            with open(filename, "r") as f:
+                for line_idx, raw_line in enumerate(f, 1):
+                    clean_line = raw_line.strip()
+                    if clean_line == "" or clean_line.startswith("#"):
+                        continue
 
-                        pattern_2 = r'max_drones\s*=\s*([a-zA-Z0-9_-]+)'
-                        cap_match = re.search(pattern_2, meta_str)
-                        if cap_match:
-                            z_cap = cap_match.group(1)
-                            if not z_cap.isdigit() or int(z_cap) <= 0:
-                                raise ValueError(f"Line {line_idx}: "
-                                                 f"'max_drones' capacity must"
-                                                 f" be a positive integer.")
+                    if self.first_active_line:
+                        if not clean_line.startswith("nb_drones:"):
+                            raise ValueError(
+                                f"Line {line_idx}: First active line"
+                                f" must define 'nb_drones'."
+                            )
+                        self.first_active_line = False
 
-                    defined_zones.add(zone_name)
-                    dict_file[clean_key].append(clean_value)
+                    if ":" not in clean_line:
+                        raise ValueError(
+                            f"Line {line_idx}: Syntax Error. Expected"
+                            f" 'key: value'."
+                        )
 
-                elif clean_key == "connection":
-                    parts = clean_value.split('[', 1)
-                    conn_part = parts[0].strip()
+                    key, value = clean_line.split(":", 1)
+                    clean_key = key.strip()
+                    clean_value = value.strip()
 
-                    if "-" not in conn_part:
-                        raise ValueError(f"Line {line_idx}: Invalid connection"
-                                         f" format. Expected 'zone1-zone2'.")
+                    if clean_key not in self.dict_file:
+                        raise ValueError(
+                            f"Line {line_idx}: Unknown key '{clean_key}'."
+                        )
 
-                    if len(parts) > 1:
-                        meta_str = parts[1].rstrip(']').strip()
-                        validate_metadata_syntax(meta_str, line_idx)
-                        pattern_1 = r'max_link_capacity\s*=\s*([a-zA-Z0-9_-]+)'
-                        cap_match = re.search(pattern_1, meta_str)
-                        if cap_match:
-                            l_cap = cap_match.group(1)
-                            if not l_cap.isdigit() or int(l_cap) <= 0:
-                                raise ValueError(f"Line {line_idx}: "
-                                                 f"'max_link_capacity' must be"
-                                                 f" a positive integer.")
+                    if clean_key == "nb_drones":
+                        if self.dict_file["nb_drones"]:
+                            raise ValueError(
+                                f"Line {line_idx}: 'nb_drones' defined twice."
+                            )
+                        if not clean_value.isdigit() or int(clean_value) <= 0:
+                            raise ValueError(
+                                f"Line {line_idx}: 'nb_drones' must be"
+                                f" positive."
+                            )
+                    elif clean_key in ["start_hub", "hub", "end_hub"]:
+                        self._parse_zone(clean_value, line_idx)
+                    elif clean_key == "connection":
+                        self._parse_connection(clean_value, line_idx)
 
-                    nodes = conn_part.split("-")
-                    if len(nodes) != 2:
-                        raise ValueError(f"Line {line_idx}: Connection must"
-                                         f" link exactly two zones.")
-                    node_a, node_b = nodes[0].strip(), nodes[1].strip()
+                    self.dict_file[clean_key].append(clean_value)
 
-                    if node_a not in defined_zones:
-                        raise ValueError(f"Line {line_idx}: Connection links"
-                                         f" undefined zone '{node_a}'.")
-                    if node_b not in defined_zones:
-                        raise ValueError(f"Line {line_idx}: Connection links"
-                                         f" undefined zone '{node_b}'.")
+        except FileNotFoundError:
+            raise FileNotFoundError("Sorry, config file not found")
 
-                    if node_a < node_b:
-                        conn_tuple = (node_a, node_b)
-                    else:
-                        conn_tuple = (node_b, node_a)
-                    if conn_tuple in seen_connections:
-                        raise ValueError(f"Line {line_idx}: Duplicate"
-                                         f" connection detected between"
-                                         f"'{node_a}' and '{node_b}'.")
-                    seen_connections.add(conn_tuple)
-                    dict_file[clean_key].append(clean_value)
+        self.verify_dict()
+        return self.dict_file
 
-    except FileNotFoundError:
-        raise FileNotFoundError("Sorry, config file not found")
-
-    return dict_file
-
-
-def validate_metadata_syntax(meta_str: str, line_idx: int) -> None:
-    """Verifies that a metadata block [key=value] is syntactically valid."""
-    if not meta_str:
-        return
-    pairs = meta_str.split()
-    for pair in pairs:
-        if "=" not in pair or pair.startswith("=") or pair.endswith("="):
-            raise ValueError(f"Line {line_idx}: Invalid metadata syntax "
-                             f"near '{pair}'. Expected 'key=value'.")
-
-
-def verify_dict(dict_file: dict[str, list[str]]) -> bool:
-    """Verify that vital configuration sections are not missing or empty."""
-    req = ["nb_drones", "start_hub", "hub", "end_hub", "connection"]
-    for word in req:
-        if word not in dict_file or len(dict_file[word]) == 0:
-            raise ValueError(f"Configuration is missing crucial"
-                             f" section: '{word}'.")
-    return True
-
-
-def parse_hub_line(line: str) -> tuple[str, int, int, str]:
-    """Helper function to break down a validated hub line."""
-    int_max = 2147483647
-    parts = line.split('[', 1)
-    main_part = parts[0].split()
-    name = main_part[0]
-    x = int(main_part[1])
-    y = int(main_part[2])
-    if x > int_max or y > int_max:
-        raise ValueError(
-            f"Coordinates for hub '{name}' exceed INT_MAX ({int_max})."
-        )
-    option = "[" + parts[1] if len(parts) > 1 else ""
-    return name, x, y, option
+    def parse_hub_line(self, line: str) -> tuple[str, int, int, str]:
+        """Helper function to break down a validated hub line."""
+        parts = line.split('[', 1)
+        main_part = parts[0].split()
+        name = main_part[0]
+        try:
+            x = int(main_part[1])
+            y = int(main_part[2])
+        except ValueError:
+            raise ValueError("swuidhguge")
+        option = "[" + parts[1] if len(parts) > 1 else ""
+        return name, x, y, option
