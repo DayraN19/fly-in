@@ -30,9 +30,17 @@ class Parser:
                     f"near '{pair}'. Expected 'key=value'."
                 )
 
+    def count(self, hub: str) -> None:
+        if()
+
     def _parse_zone(self, clean_value: str, line_idx: int) -> None:
         """Parse and validate start_hub, hub, and end_hub entries."""
-        parts = clean_value.split('[', 1)
+        # parts_0 = clean_value.split('[')[0].split(']')[0]
+        # parts_1 = clean_value.split('[')[1].split(']')[0]
+        try:
+            parts = clean_value.split('[', 1)
+        except Exception:
+            print("Metadata must start with a")
         main_part = parts[0].split()
 
         if len(main_part) < 3:
@@ -64,6 +72,7 @@ class Parser:
 
         if len(parts) > 1:
             meta_str = parts[1].rstrip(']').strip()
+            print(f"{parts[1]}")
             self.validate_metadata_syntax(meta_str, line_idx)
 
             type_match = re.search(r'zone_type\s*=\s*([a-zA-Z0-9_-]+)',

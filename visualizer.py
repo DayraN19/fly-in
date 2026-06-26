@@ -25,7 +25,7 @@ GOLD = (241, 196, 15)          # Accentuation turn et IDs
 
 class GraphVisualizer:
     """Visualize the drone simulation using an advanced, sleek Pygame interface.
-    
+
     Handles unified metadata colors for hubs, connections, and smooth rendering.
     """
 
