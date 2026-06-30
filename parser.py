@@ -30,20 +30,38 @@ class Parser:
                     f"near '{pair}'. Expected 'key=value'."
                 )
 
-    def count(self, hub: str) -> None:
-        if()
+    def validate_metadata_brackets(self, clean_value: str,
+                                   line_idx: int) -> None:
+        count_open = clean_value.count('[')
+        count_close = clean_value.count(']')
+
+        if count_open != count_close:
+            raise ValueError(
+                f"Line {line_idx}: Mismatched brackets. "
+                f"Found {count_open} '[' and {count_close} ']'."
+            )
+
+        if count_open > 1:
+            raise ValueError(
+                f"Line {line_idx}: Multiple metadata blocks detected. "
+                f"Only one '[metadata]' block is allowed."
+            )
+
+        if count_open == 1:
+            if clean_value.find('[') > clean_value.find(']'):
+                raise ValueError(
+                    f"Line {line_idx}: Invalid bracket order. "
+                    f"'[' must come before ']'."
+                )
 
     def _parse_zone(self, clean_value: str, line_idx: int) -> None:
         """Parse and validate start_hub, hub, and end_hub entries."""
         # parts_0 = clean_value.split('[')[0].split(']')[0]
         # parts_1 = clean_value.split('[')[1].split(']')[0]
-        try:
-            parts = clean_value.split('[', 1)
-        except Exception:
-            print("Metadata must start with a")
+        parts = clean_value.split()
         main_part = parts[0].split()
 
-        if len(main_part) < 3:
+        if len(parts) < 3:
             raise ValueError(
                 f"Line {line_idx}: Invalid zone format. "
                 f"Expected 'name X Y [metadata]'."
@@ -60,8 +78,8 @@ class Parser:
                 f"Line {line_idx}: Zone name '{zone_name}' contains a dash."
             )
         try:
-            x_3 = int(main_part[1])
-            y_3 = int(main_part[2])
+            x_3 = int(parts[1])
+            y_3 = int(parts[2])
         except Exception:
             raise ValueError("Number is not an int")
 
@@ -70,10 +88,10 @@ class Parser:
             raise ValueError(f"Line {line_idx}: Coordinates exceed INT_MIN"
                              f" or MAX")
 
-        if len(parts) > 1:
-            meta_str = parts[1].rstrip(']').strip()
-            print(f"{parts[1]}")
+        if len(parts) > 3:
+            meta_str = parts[3]
             self.validate_metadata_syntax(meta_str, line_idx)
+            self.validate_metadata_brackets(clean_value, line_idx)
 
             type_match = re.search(r'zone_type\s*=\s*([a-zA-Z0-9_-]+)',
                                    meta_str)
@@ -95,6 +113,17 @@ class Parser:
                     )
 
         self.defined_zones.add(zone_name)
+
+    # def count(self, conf_str: str) -> None:
+    #     phras: str = conf_str.split()
+    #     if '[' in phras and ']' in phras:
+    #         pass
+    #     elif '[' in phras and ']' not in phras:
+    #         print("Invalid Metadata Syntax: [Metadata]")
+    #     elif '[' not in phras and ']' in phras:
+    #         print("Invalid Metadata Syntax: [Metadata]")
+    #     elif '[' not in phras and ']' not in phras:
+    #         print("Invalid Metadata Syntax: [Metadata]")
 
     def _parse_connection(self, clean_value: str, line_idx: int) -> None:
         """Parse and validate connection pathways between hubs."""
