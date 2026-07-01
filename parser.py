@@ -17,6 +17,7 @@ class Parser:
         self.first_active_line: bool = True
         self.int_max: int = 2147483647
         self.int_min: int = -2147483647
+        self.zones_max_drones: dict[str, int] = {}
 
     def validate_metadata_syntax(self, meta_str: str, line_idx: int) -> None:
         """Verify that a metadata block [key=value] is syntactically valid."""
@@ -56,12 +57,12 @@ class Parser:
 
     def _parse_zone(self, clean_value: str, line_idx: int) -> None:
         """Parse and validate start_hub, hub, and end_hub entries."""
-        # parts_0 = clean_value.split('[')[0].split(']')[0]
-        # parts_1 = clean_value.split('[')[1].split(']')[0]
-        parts = clean_value.split()
+        self.validate_metadata_brackets(clean_value, line_idx)
+
+        parts = clean_value.split('[', 1)
         main_part = parts[0].split()
 
-        if len(parts) < 3:
+        if len(main_part) < 3:
             raise ValueError(
                 f"Line {line_idx}: Invalid zone format. "
                 f"Expected 'name X Y [metadata]'."
@@ -73,25 +74,34 @@ class Parser:
             )
 
         zone_name = main_part[0]
+
+        if zone_name in self.defined_zones:
+            raise ValueError(
+                f"Line {line_idx}: Duplicate hub detected. "
+                f"A hub named '{zone_name}' has already been defined."
+            )
+
         if "-" in zone_name:
             raise ValueError(
                 f"Line {line_idx}: Zone name '{zone_name}' contains a dash."
             )
+
         try:
-            x_3 = int(parts[1])
-            y_3 = int(parts[2])
+            x_3 = int(main_part[1])
+            y_3 = int(main_part[2])
         except Exception:
             raise ValueError("Number is not an int")
 
         if (x_3 > self.int_max or x_3 < self.int_min or y_3 > self.int_max
                 or y_3 < self.int_min):
-            raise ValueError(f"Line {line_idx}: Coordinates exceed INT_MIN"
-                             f" or MAX")
+            raise ValueError(f"Line {line_idx}: Coordinates exceed"
+                             f"INT_MIN or MAX")
 
-        if len(parts) > 3:
-            meta_str = parts[3]
+        max_drones_value = 1
+
+        if len(parts) > 1:
+            meta_str = parts[1].rstrip(']').strip()
             self.validate_metadata_syntax(meta_str, line_idx)
-            self.validate_metadata_brackets(clean_value, line_idx)
 
             type_match = re.search(r'zone_type\s*=\s*([a-zA-Z0-9_-]+)',
                                    meta_str)
@@ -107,23 +117,91 @@ class Parser:
                                   meta_str)
             if cap_match:
                 z_cap = cap_match.group(1)
-                if not z_cap.isdigit() or int(z_cap) <= 0:
+                print(f"{z_cap}")
+                if not z_cap.isdigit() or int(z_cap) < 0:
                     raise ValueError(
-                        f"Line {line_idx}: 'max_drones' must be positive."
+                        f"Line {line_idx}: 'max_drones' must be positive"
+                        f" or zero."
                     )
+                max_drones_value = int(z_cap)
 
         self.defined_zones.add(zone_name)
+        self.zones_max_drones[zone_name] = max_drones_value
 
-    # def count(self, conf_str: str) -> None:
-    #     phras: str = conf_str.split()
-    #     if '[' in phras and ']' in phras:
-    #         pass
-    #     elif '[' in phras and ']' not in phras:
-    #         print("Invalid Metadata Syntax: [Metadata]")
-    #     elif '[' not in phras and ']' in phras:
-    #         print("Invalid Metadata Syntax: [Metadata]")
-    #     elif '[' not in phras and ']' not in phras:
-    #         print("Invalid Metadata Syntax: [Metadata]")
+    # def _parse_zone(self, clean_value: str, line_idx: int) -> None:
+    #     """Parse and validate start_hub, hub, and end_hub entries."""
+    #     # parts_0 = clean_value.split('[')[0].split(']')[0]
+    #     # parts_1 = clean_value.split('[')[1].split(']')[0]
+    #     parts = clean_value.split()
+    #     main_part = parts[0].split()
+
+    #     zone_name = main_part[0]
+    #     if zone_name in self.defined_zones:
+    #         raise ValueError(
+    #             f"Line {line_idx}: Duplicate hub detected. "
+    #             f"A hub named '{zone_name}' has already been defined."
+    #         )
+
+    #     if "-" in zone_name:
+    #         raise ValueError(
+    #             f"Line {line_idx}: Zone name '{zone_name}' contains a dash."
+    #         )
+
+    #     if len(parts) < 3:
+    #         raise ValueError(
+    #             f"Line {line_idx}: Invalid zone format. "
+    #             f"Expected 'name X Y [metadata]'."
+    #         )
+    #     if len(main_part) > 3:
+    #         bad_name = " ".join(main_part[:-2])
+    #         raise ValueError(
+    #             f"Line {line_idx}: Zone name '{bad_name}' contains spaces."
+    #         )
+
+    #     zone_name = main_part[0]
+    #     if "-" in zone_name:
+    #         raise ValueError(
+    #             f"Line {line_idx}: Zone name '{zone_name}' contains a dash."
+    #         )
+    #     try:
+    #         x_3 = int(parts[1])
+    #         y_3 = int(parts[2])
+    #     except Exception:
+    #         raise ValueError("Number is not an int")
+
+    #     if (x_3 > self.int_max or x_3 < self.int_min or y_3 > self.int_max
+    #             or y_3 < self.int_min):
+    #         raise ValueError(f"Line {line_idx}: Coordinates exceed INT_MIN"
+    #                          f" or MAX")
+
+    #     max_drones_value = 0
+
+    #     if len(parts) > 3:
+    #         meta_str = parts[3]
+    #         self.validate_metadata_syntax(meta_str, line_idx)
+    #         self.validate_metadata_brackets(clean_value, line_idx)
+
+    #         type_match = re.search(r'zone_type\s*=\s*([a-zA-Z0-9_-]+)',
+    #                                meta_str)
+    #         if type_match:
+    #             z_type = type_match.group(1)
+    #             if z_type not in ["normal", "blocked", "restricted",
+    #                               "priority"]:
+    #                 raise ValueError(
+    #                     f"Line {line_idx}: Invalid zone type '{z_type}'."
+    #                 )
+
+    #         cap_match = re.search(r'max_drones\s*=\s*([a-zA-Z0-9_-]+)',
+    #                               meta_str)
+    #         if cap_match:
+    #             z_cap = cap_match.group(1)
+    #             if not z_cap.isdigit() or int(z_cap) <= 0:
+    #                 raise ValueError(
+    #                     f"Line {line_idx}: 'max_drones' must be positive."
+    #                 )
+    #             max_drones_value = int(z_cap)
+    #     self.defined_zones.add(zone_name)
+    #     self.zones_max_drones[zone_name] = max_drones_value
 
     def _parse_connection(self, clean_value: str, line_idx: int) -> None:
         """Parse and validate connection pathways between hubs."""

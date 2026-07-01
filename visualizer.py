@@ -177,7 +177,7 @@ class GraphVisualizer:
             pygame.draw.circle(self.screen, base_color, pos, radius - 6, 1)
             
             # JAUGE INTERNE HARMONISÉE (Utilise la même couleur, assombrie)
-            max_dr = getattr(hub, 'max_drones', 0)
+            max_dr = 
             if max_dr > 0:
                 fill_ratio = min(1.0, hub.current_drones_count / max_dr)
                 if fill_ratio > 0:
@@ -239,8 +239,6 @@ class GraphVisualizer:
                         pos_start[0] + random.randint(-10, 10),
                         pos_start[1] + random.randint(-10, 10),
                     )
-
-            # Couleur du drone (Orange électrique en transit, Jaune stable)
             color_drone = (
                 (230, 126, 34) if transit_turns == 1 else (241, 196, 15)
             )
@@ -275,4 +273,4 @@ class GraphVisualizer:
             self.screen.blit(surface, (35, 30))
 
         pygame.display.flip()
-        self.clock.tick(2)
+        self.clock.tick(4)

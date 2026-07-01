@@ -2,7 +2,7 @@ install:
 	pip install -r requirements.txt
 
 run:
-	python3 flyin.py maps/easy/02_simple_fork.txt
+	python3 flyin.py maps/challenger/01_the_impossible_dream.txt
 debug:
 	python3 -m pdb flyin.py
 

@@ -102,6 +102,9 @@ def main() -> None:
         )
         drones.append(nouveau_drone)
 
+    for hub_object in all_hubs.values():
+        hub_object.current_drones_count = 0
+
     for ligne_conn in config["connection"]:
         ligne_nettoyee = ligne_conn.split("[")[0].strip()
         ligne_nettoyee = ligne_nettoyee.replace("-", " ")
@@ -194,23 +197,24 @@ def main() -> None:
                     else:
                         move_cost = 1.0
 
+                    max_limit = parse.zones_max_drones.get(next_hub_name,
+                                                           2147483647)
+                    is_goal = next_hub_name == end_name
+
                     if zone_type == "restricted":
-                        max_drones = int(next_hub_object.max_drones)
-                        if next_hub_object.current_drones_count < max_drones:
+                        if (is_goal or next_hub_object.current_drones_count
+                                < max_limit):
                             next_hub_object.current_drones_count += 1
                             drone.transit_turns_left = 2
                             drone.connection = next_hub_name
                             drone.total_cost += move_cost
                             total_moves_executed += 1
                     else:
-                        max_drones = int(next_hub_object.max_drones)
-                        if (
-                            next_hub_object.current_drones_count < max_drones
-                            or next_hub_name == end_name
-                        ):
+                        if (is_goal or next_hub_object.current_drones_count
+                                < max_limit):
                             if drone.zone != start_name:
                                 current_hub_object.current_drones_count -= 1
-                            if next_hub_name != end_name:
+                            if not is_goal:
                                 next_hub_object.current_drones_count += 1
 
                             drone.zone = next_hub_name
