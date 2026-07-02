@@ -2,7 +2,7 @@ import sys
 from drone import Drone
 from hub import Hub
 from parser import Parser
-from pathfinding import find_short_path, get_dynamic_path
+from pathfinding import Pathfinder
 from visualizer import GraphVisualizer
 
 
@@ -123,6 +123,8 @@ def main() -> None:
     all_hubs[start_name].current_drones_count = nb_drones
 
     visualizer = GraphVisualizer(all_hubs, drones, parse)
+    visualizer.turn = 0
+    visualizer.run_turn()
     turn = 0
     sim_run = True
     total_moves_executed = 0
@@ -158,11 +160,11 @@ def main() -> None:
                 if drone.transit_turns_left > 0 or drone.connection:
                     continue
 
-                dynamic_path = get_dynamic_path(
+                dynamic_path = Pathfinder.find_dynamic_path(
                     all_hubs[drone.zone], all_hubs[end_name], all_hubs
                 )
                 if not dynamic_path:
-                    dynamic_path = find_short_path(
+                    dynamic_path = Pathfinder.find_short_path(
                         all_hubs[drone.zone], all_hubs[end_name], all_hubs
                     )
 

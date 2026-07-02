@@ -1,10 +1,9 @@
-"""
-Graphical visualizer module using Pygame for the Fly-In drone simulation.
+"""Graphical visualizer module using Pygame for the Fly-In drone simulation.
+
 Modern Dark-Mode Edition with unified metadata coloring.
 """
 
 import math
-import random
 import re
 import sys
 from typing import TYPE_CHECKING
@@ -23,17 +22,16 @@ GOLD = (241, 196, 15)
 
 
 class GraphVisualizer:
-    """Visualize the drone simulation using an
+    """Visualize the drone simulation using an advanced,
+    sleek Pygame interface.
 
-    advanced, sleek Pygame interface.
-
-    Handles unified metadata colors for hubs,
-
-    connections, and smooth rendering.
+    Handles unified metadata colors for hubs, connections, and smooth
+    rendering.
     """
 
     def __init__(self, all_hubs: dict[str, "Hub"],
-                 drones: list["Drone"], parse_instance) -> None:
+                 drones: list["Drone"],
+                 parse_instance: any) -> None:
         """Initialize the graphical visualizer with fallback safe fonts."""
         pygame.init()
         self.all_hubs: dict[str, "Hub"] = all_hubs
@@ -63,9 +61,15 @@ class GraphVisualizer:
             self.title_font = None
             self.has_font = False
 
-        self.scale_x: int = 62
-        self.scale_y: int = 140
-        self.offset_x: int = 80
+        num_hubs = len(all_hubs)
+        if num_hubs <= 6:
+            self.scale_x = 220
+            self.scale_y = 260
+            self.offset_x = 250
+        else:
+            self.scale_x = 62
+            self.scale_y = 140
+            self.offset_x = 80
         self.offset_y: int = self.height // 2
 
     def to_screen_coords(self, x: float, y: float) -> tuple[int, int]:
@@ -107,10 +111,7 @@ class GraphVisualizer:
 
         for hub in self.all_hubs.values():
             start_pos = self.to_screen_coords(hub.x, hub.y)
-            if hasattr(hub, 'connections'):
-                connections = hub.connections
-            else:
-                connections = []
+            connections = getattr(hub, 'connections', [])
 
             for neighbor in connections:
                 neighbor_obj = (
@@ -152,13 +153,13 @@ class GraphVisualizer:
 
             if base_color is None:
                 if hub_name == "start":
-                    base_color = (46, 204, 113)  # Vert
+                    base_color = (46, 204, 113)
                 elif "goal" in hub_name or hub_name == "impossible_goal":
-                    base_color = (155, 89, 182)  # Violet
+                    base_color = (155, 89, 182)
                 elif getattr(hub, 'max_drones', 1) == 1:
-                    base_color = (231, 76, 60)   # Rouge
+                    base_color = (231, 76, 60)
                 else:
-                    base_color = (52, 152, 219)  # Bleu
+                    base_color = (52, 152, 219)
 
             if hub_name == "start":
                 radius = 35
@@ -183,8 +184,6 @@ class GraphVisualizer:
                         self.screen, gauge_color, pos,
                         int((radius - 8) * fill_ratio)
                     )
-            elif limit_drones == 0:
-                pass
 
             if self.has_font and self.small_font:
                 if hub.current_drones_count > 0:
@@ -195,10 +194,17 @@ class GraphVisualizer:
                     f"{hub_name} ({hub.current_drones_count}/{limit_drones})",
                     True, lbl_color
                 )
-                self.screen.blit(txt, (pos[0] - 40, pos[1] - radius - 20))
+                self.screen.blit(txt, (pos[0] - 40, pos[1] - radius - 24))
 
     def draw_drones(self) -> None:
         """Draw custom futuristic drones with detailed positioning."""
+        drones_by_zone: dict[str, list[any]] = {}
+        for drone in self.drones:
+            zone_name = drone.zone
+            if zone_name not in drones_by_zone:
+                drones_by_zone[zone_name] = []
+            drones_by_zone[zone_name].append(drone)
+
         for i, drone in enumerate(self.drones):
             hub_actuel = self.all_hubs.get(drone.zone)
             if not hub_actuel:
@@ -218,27 +224,27 @@ class GraphVisualizer:
                 else:
                     pos = pos_start
             else:
-                if drone.zone in ("start", "impossible_goal"):
-                    num_drones_here = len(
-                        [d for d in self.drones if d.zone == drone.zone]
-                    )
-                    idx_here = [
-                        d for d in self.drones if d.zone == drone.zone
-                    ].index(drone)
-                    angle = (2 * math.pi * idx_here) / (
-                        num_drones_here if num_drones_here > 0 else 1
-                    )
-                    dist = 52 if drone.zone == "impossible_goal" else 46
+                zone_drones = drones_by_zone.get(drone.zone, [])
+                num_drones_here = len(zone_drones)
+
+                if num_drones_here <= 1:
+                    pos = pos_start
+                else:
+                    idx_here = zone_drones.index(drone)
+                    angle = (2 * math.pi * idx_here) / num_drones_here
+
+                    if drone.zone == "impossible_goal":
+                        dist = 52
+                    elif drone.zone == "start":
+                        dist = 46
+                    else:
+                        dist = 36
+
                     pos = (
                         int(pos_start[0] + dist * math.cos(angle)),
                         int(pos_start[1] + dist * math.sin(angle)),
                     )
-                else:
-                    random.seed(i)
-                    pos = (
-                        pos_start[0] + random.randint(-10, 10),
-                        pos_start[1] + random.randint(-10, 10),
-                    )
+
             color_drone = (
                 (230, 126, 34) if transit_turns == 1 else (241, 196, 15)
             )
@@ -268,7 +274,7 @@ class GraphVisualizer:
 
         if self.has_font and self.title_font:
             surface = self.title_font.render(
-                f"FLY-IN SYSTEM CORE  |  TURN {self.turn}", True, TEXT_COLOR
+                f"FLY-IN SYSTEM CORE | TURN {self.turn - 1}", True, TEXT_COLOR
             )
             self.screen.blit(surface, (35, 30))
 

@@ -232,13 +232,13 @@ class Parser:
                 total_drones = int(self.dict_file["nb_drones"][0])
                 if ("start_hub" in self.dict_file
                         and self.dict_file["start_hub"]):
-                    start_name = self.parse_hub_line
-                    (self.dict_file["start_hub"][0])[0]
+                    opt_start = self.dict_file["start_hub"][0]
+                    start_name = self.parse_hub_line(opt_start)[0]
                     self.zones_max_drones[start_name] = total_drones
 
                 if "end_hub" in self.dict_file and self.dict_file["end_hub"]:
-                    end_name = self.parse_hub_line
-                    (self.dict_file["end_hub"][0])[0]
+                    opt = self.dict_file["end_hub"][0]
+                    end_name = self.parse_hub_line(opt)[0]
                     self.zones_max_drones[end_name] = total_drones
 
         except FileNotFoundError:

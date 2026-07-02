@@ -1,2 +1,14 @@
 .mypy_cache/
 __pycache__/
+limit_drones = self.parse.zones_max_drones.get(hub_name, 0)
+
+            if limit_drones > 0:
+                fill_ratio = min(1.0, hub.current_drones_count / limit_drones)
+                if fill_ratio > 0:
+                    gauge_color = [int(c * 0.7) for c in base_color]
+                    pygame.draw.circle(
+                        self.screen, gauge_color, pos,
+                        int((radius - 8) * fill_ratio)
+                    )
+            elif limit_drones == 0:
+                pass
