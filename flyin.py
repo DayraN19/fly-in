@@ -122,7 +122,7 @@ def main() -> None:
         hub_obj.current_drones_count = 0
     all_hubs[start_name].current_drones_count = nb_drones
 
-    visualizer = GraphVisualizer(all_hubs, drones)
+    visualizer = GraphVisualizer(all_hubs, drones, parse)
     turn = 0
     sim_run = True
     total_moves_executed = 0
@@ -212,10 +212,8 @@ def main() -> None:
                     else:
                         if (is_goal or next_hub_object.current_drones_count
                                 < max_limit):
-                            if drone.zone != start_name:
-                                current_hub_object.current_drones_count -= 1
-                            if not is_goal:
-                                next_hub_object.current_drones_count += 1
+                            current_hub_object.current_drones_count -= 1
+                            next_hub_object.current_drones_count += 1
 
                             drone.zone = next_hub_name
                             drone.path.pop(0)
